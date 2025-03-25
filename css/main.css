@@ -3,20 +3,9 @@
 /* ==========================================================================
    Author's custom styles
    ========================================================================== */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		
+html {
+  font-family: 'Helvetica Neue LT,-apple-system,BlinkMacSystemFont,Helvetica Neue,Helveticabold,sans-serif';
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
