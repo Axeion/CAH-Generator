@@ -307,25 +307,55 @@ if ($batch != '' && $card_count < 201) {
 	$card_front = $icon . $card_front;
 
 	foreach ($card_text as $i => $text) {
-
-		// Replaces formatted quotations and apostrophes used by Microsoft Word
-		//$text = str_replace ('\“', '\"', $text);
-		//$text = str_replace ('\”', '\"', $text);
-		//$text = str_replace ('\’', '\'', $text);
-
-		//$text = escapeshellcmd($text);
-
-		//$text = str_replace ('\\\\x\\{201C\\}', '\\x{201C}', $text);
-		//$text = str_replace ('\\\\x\\{201D\\}', '\\x{201D}', $text);
-		//$text = str_replace ('\\\\x\\{2019\\}', '\\x{2019}', $text);
-		//$text = str_replace ('\\\\n', '\\n', $text);
- 
-		//$padded_i = sprintf('%03d', $i);
-
-		exec('perl -e \'use utf8; binmode(STDOUT, ":utf8"); print "' . $text . '\n";\' | tee -a ' . $cwd . '/card_log.txt | convert ' . $card_front_path . $card_front . ' -page +444+444 -units PixelsPerInch -background ' . $card_color . ' -fill ' . $fill . ' -font ' . $cwd . '/fonts/HelveticaNeueBold.ttf -pointsize 15 -kerning -1 -density 1200 -size 2450x caption:@- -flatten ' . $path . '/temp.png; mv ' . $path . '/temp.png ' . $path . '/' . $img_file_prefix . '_' . $padded_i . '.png');
+		// Create a padded index for the filename
+		$padded_i = sprintf('%03d', $i);
+		
+		// Process special characters - uncomment if needed
+		$text = str_replace('\\x{201C}', '"', $text); // Opening quote
+		$text = str_replace('\\x{201D}', '"', $text); // Closing quote
+		$text = str_replace('\\x{2019}', "'", $text); // Apostrophe
+		$text = str_replace('\\n', "\n", $text);      // Newline
+		
+		// Log the text for debugging if needed
+		file_put_contents($cwd . '/card_log.txt', $text . "\n", FILE_APPEND);
+		
+		// Create a temporary file with the card text
+		$temp_text_file = $path . '/text_' . $padded_i . '.txt';
+		file_put_contents($temp_text_file, $text);
+		
+		// Use ImageMagick to create the card with text from the file
+		$cmd = 'convert ' . 
+			   escapeshellarg($card_front_path . $card_front) . ' ' .
+			   '-page +444+444 ' .
+			   '-units PixelsPerInch ' .
+			   '-background ' . escapeshellarg($card_color) . ' ' .
+			   '-fill ' . escapeshellarg($fill) . ' ' .
+			   '-font ' . escapeshellarg($cwd . '/fonts/HelveticaNeueBold.ttf') . ' ' .
+			   '-pointsize 15 ' .
+			   '-kerning -1 ' .
+			   '-density 1200 ' .
+			   '-size 2450x ' .
+			   'caption:@' . escapeshellarg($temp_text_file) . ' ' .
+			   '-flatten ' . 
+			   escapeshellarg($path . '/temp.png');
+		
+		exec($cmd);
+		
+		// Move the temporary image to the final filename
+		$mv_cmd = 'mv ' . 
+				  escapeshellarg($path . '/temp.png') . ' ' . 
+				  escapeshellarg($path . '/' . $img_file_prefix . '_' . $padded_i . '.png');
+		
+		exec($mv_cmd);
+		
+		// Clean up the temporary text file
+		if (file_exists($temp_text_file)) {
+			unlink($temp_text_file);
+		}
 	}
 
-	exec("cd $path; zip $batch.zip *.png");
+	// Create a zip file with all the generated cards
+	exec("cd " . escapeshellarg($path) . "; zip " . escapeshellarg($batch . ".zip") . " *.png");
 }
 
 ?>
